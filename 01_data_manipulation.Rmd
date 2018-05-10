@@ -39,6 +39,7 @@ length(which(oyster_data$SubSystem %in% c("LTB","TRAM")))
 ## Data Manipulation
 
 ```{r data4, include=FALSE}
+#sremove LTB and TRAM
 oyster_data <- subset(oyster_data, !SubSystem %in% c("LTB","TRAM"))
 ```
 
@@ -67,6 +68,7 @@ downo is a numeric day of week column with 1 being Sunday and 7 being Saturday. 
 oyster_data$daytype <- factor(oyster_data$daytype, 
                               levels = c("Mon","Tue","Wed",
                                          "Thu","Fri","Sat","Sun"))
+
 #presenting proportions of records by day
 temp <- prop.table(xtabs(~daytype, oyster_data))
 barplot(temp, col = RColorBrewer::brewer.pal(7, "Blues"), 
@@ -78,6 +80,7 @@ barplot(temp, col = RColorBrewer::brewer.pal(7, "Blues"),
 Now, I move on to cleaning text/character columns for start and end stations. Here I have used the stringr pacakge and its r str_replace_all function to replace multiple patterns found in a column at the same time. I have also used the qdapRegex package and its rm_white function to remove all unnecessary white spaces.
 
 ```{r stations}
+#prepare those to be modified
 x <- c(" st " = " Street ", " STRT " = " Street ", 
        " Term " = " Terminal ", " Terms " = " Terminals ", 
        " Mkt " = " Market ", " Rd " = " Road ",
@@ -86,6 +89,8 @@ x <- c(" st " = " Street ", " STRT " = " Street ",
        " WAGN TOC Gates" = " ", " FGW" = "", " SCL" = "", " 
        TOCs" = "", " NR" = " ", "&" = "and")
 colrm <- c("StartStn", "EndStation")
+
+#replace
 oyster_data$StartStn <- stringr::str_replace_all(oyster_data$StartStn, x)
 oyster_data$EndStation <- stringr::str_replace_all(oyster_data$EndStation, x)
 oyster_data$Origin <- qdapRegex::rm_white(oyster_data$StartStn)
@@ -106,11 +111,11 @@ temp$ExTime <- temp$ExTime - 1440
 temp$downo <- temp$downo + 1
 levels(temp$daytype) <- c("Tue","Wed","Thu","Fri","Sat","Sun","Mon")
 temp$EntTimeHHMM <- sprintf("%02i:%02i", 
-                             lubridate::hour(lubridate::seconds_to_period(temp$EntTime*60)),
-                             lubridate::minute(lubridate::seconds_to_period(temp$EntTime*60)))
+                          lubridate::hour(lubridate::seconds_to_period(temp$EntTime*60)),
+                          lubridate::minute(lubridate::seconds_to_period(temp$EntTime*60)))
 temp$EXTimeHHMM <- sprintf("%02i:%02i", 
-                             lubridate::hour(lubridate::seconds_to_period(temp$ExTime*60)),
-                             lubridate::minute(lubridate::seconds_to_period(temp$ExTime*60)))
+                          lubridate::hour(lubridate::seconds_to_period(temp$ExTime*60)),
+                          lubridate::minute(lubridate::seconds_to_period(temp$ExTime*60)))
 oyster_data <- subset(oyster_data, EntTime <= 1440 | ExTime <= 1440)
 oyster_data <- rbind(oyster_data, temp)
 #for those with exit errors
@@ -133,21 +138,19 @@ Based on the modified entry and exit times for each journey, three columns are a
 ```{r datetimeweek}
 #create single entry/exit datetime columns
 oyster_data$EntryDateTime <- strptime(paste0(as.Date(paste0(oyster_data$downo, 
-                                                            "/11/2009 "), 
-                                         format = "%d/%m/%Y"), " ", 
-                                 oyster_data$EntTimeHHMM),
-                                  format = "%Y-%m-%d %H:%M")
+                                "/11/2009 "), format = "%d/%m/%Y"), " ", 
+                                oyster_data$EntTimeHHMM),
+                                format = "%Y-%m-%d %H:%M")
 oyster_data$ExitDateTime <- strptime(paste0(as.Date(paste0(oyster_data$downo_exit, 
-                                                      "/11/2009 "), 
-                                         format = "%d/%m/%Y"), " ", 
+                                 "/11/2009 "), format = "%d/%m/%Y"), " ", 
                                  oyster_data$EXTimeHHMM),
-                                  format = "%Y-%m-%d %H:%M")
+                                format = "%Y-%m-%d %H:%M")
+
 #based on the entry day, create weekend/weekday column
 oyster_data$Week <- ifelse(oyster_data$downo %in% c(1,7), 
                            "weekend", "weekday")
-temp <- prop.table(xtabs(~Week, oyster_data))
-temp
-rm(temp)
+#check proportions of weekend/day
+prop.table(xtabs(~Week, oyster_data))
 
 ```
 
@@ -192,7 +195,7 @@ names(oyster_data) <- c("Origin",
 
 This is how the final data set looks like.
 
-```{r fd}
+```{r fd, include=FALSE}
 head(oyster_data, n = 5)
 ```
 

@@ -198,6 +198,7 @@ head(oyster_data)</code></pre>
 oyster_data$daytype &lt;- factor(oyster_data$daytype, 
                               levels = c(&quot;Mon&quot;,&quot;Tue&quot;,&quot;Wed&quot;,
                                          &quot;Thu&quot;,&quot;Fri&quot;,&quot;Sat&quot;,&quot;Sun&quot;))
+
 #presenting proportions of records by day
 temp &lt;- prop.table(xtabs(~daytype, oyster_data))
 barplot(temp, col = RColorBrewer::brewer.pal(7, &quot;Blues&quot;), 
@@ -206,7 +207,8 @@ barplot(temp, col = RColorBrewer::brewer.pal(7, &quot;Blues&quot;),
         ylab = &quot;Percentage of Total Journeys&quot;)</code></pre>
 <p><img src="data:image/png;base64,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" /><!-- --></p>
 <p>Now, I move on to cleaning text/character columns for start and end stations. Here I have used the stringr pacakge and its r str_replace_all function to replace multiple patterns found in a column at the same time. I have also used the qdapRegex package and its rm_white function to remove all unnecessary white spaces.</p>
-<pre class="r"><code>x &lt;- c(&quot; st &quot; = &quot; Street &quot;, &quot; STRT &quot; = &quot; Street &quot;, 
+<pre class="r"><code>#prepare those to be modified
+x &lt;- c(&quot; st &quot; = &quot; Street &quot;, &quot; STRT &quot; = &quot; Street &quot;, 
        &quot; Term &quot; = &quot; Terminal &quot;, &quot; Terms &quot; = &quot; Terminals &quot;, 
        &quot; Mkt &quot; = &quot; Market &quot;, &quot; Rd &quot; = &quot; Road &quot;,
        &quot; VIL &quot; = &quot; Village &quot;, 
@@ -214,6 +216,8 @@ barplot(temp, col = RColorBrewer::brewer.pal(7, &quot;Blues&quot;),
        &quot; WAGN TOC Gates&quot; = &quot; &quot;, &quot; FGW&quot; = &quot;&quot;, &quot; SCL&quot; = &quot;&quot;, &quot; 
        TOCs&quot; = &quot;&quot;, &quot; NR&quot; = &quot; &quot;, &quot;&amp;&quot; = &quot;and&quot;)
 colrm &lt;- c(&quot;StartStn&quot;, &quot;EndStation&quot;)
+
+#replace
 oyster_data$StartStn &lt;- stringr::str_replace_all(oyster_data$StartStn, x)
 oyster_data$EndStation &lt;- stringr::str_replace_all(oyster_data$EndStation, x)
 oyster_data$Origin &lt;- qdapRegex::rm_white(oyster_data$StartStn)
@@ -247,11 +251,11 @@ temp$ExTime &lt;- temp$ExTime - 1440
 temp$downo &lt;- temp$downo + 1
 levels(temp$daytype) &lt;- c(&quot;Tue&quot;,&quot;Wed&quot;,&quot;Thu&quot;,&quot;Fri&quot;,&quot;Sat&quot;,&quot;Sun&quot;,&quot;Mon&quot;)
 temp$EntTimeHHMM &lt;- sprintf(&quot;%02i:%02i&quot;, 
-                             lubridate::hour(lubridate::seconds_to_period(temp$EntTime*60)),
-                             lubridate::minute(lubridate::seconds_to_period(temp$EntTime*60)))
+                          lubridate::hour(lubridate::seconds_to_period(temp$EntTime*60)),
+                          lubridate::minute(lubridate::seconds_to_period(temp$EntTime*60)))
 temp$EXTimeHHMM &lt;- sprintf(&quot;%02i:%02i&quot;, 
-                             lubridate::hour(lubridate::seconds_to_period(temp$ExTime*60)),
-                             lubridate::minute(lubridate::seconds_to_period(temp$ExTime*60)))
+                          lubridate::hour(lubridate::seconds_to_period(temp$ExTime*60)),
+                          lubridate::minute(lubridate::seconds_to_period(temp$ExTime*60)))
 oyster_data &lt;- subset(oyster_data, EntTime &lt;= 1440 | ExTime &lt;= 1440)
 oyster_data &lt;- rbind(oyster_data, temp)
 #for those with exit errors
@@ -270,24 +274,22 @@ rm(temp)</code></pre>
 <p>Based on the modified entry and exit times for each journey, three columns are added for the entry datetime, exit datetime, and entry type of day (weekend or weekday).</p>
 <pre class="r"><code>#create single entry/exit datetime columns
 oyster_data$EntryDateTime &lt;- strptime(paste0(as.Date(paste0(oyster_data$downo, 
-                                                            &quot;/11/2009 &quot;), 
-                                         format = &quot;%d/%m/%Y&quot;), &quot; &quot;, 
-                                 oyster_data$EntTimeHHMM),
-                                  format = &quot;%Y-%m-%d %H:%M&quot;)
+                                &quot;/11/2009 &quot;), format = &quot;%d/%m/%Y&quot;), &quot; &quot;, 
+                                oyster_data$EntTimeHHMM),
+                                format = &quot;%Y-%m-%d %H:%M&quot;)
 oyster_data$ExitDateTime &lt;- strptime(paste0(as.Date(paste0(oyster_data$downo_exit, 
-                                                      &quot;/11/2009 &quot;), 
-                                         format = &quot;%d/%m/%Y&quot;), &quot; &quot;, 
+                                 &quot;/11/2009 &quot;), format = &quot;%d/%m/%Y&quot;), &quot; &quot;, 
                                  oyster_data$EXTimeHHMM),
-                                  format = &quot;%Y-%m-%d %H:%M&quot;)
+                                format = &quot;%Y-%m-%d %H:%M&quot;)
+
 #based on the entry day, create weekend/weekday column
 oyster_data$Week &lt;- ifelse(oyster_data$downo %in% c(1,7), 
                            &quot;weekend&quot;, &quot;weekday&quot;)
-temp &lt;- prop.table(xtabs(~Week, oyster_data))
-temp</code></pre>
+#check proportions of weekend/day
+prop.table(xtabs(~Week, oyster_data))</code></pre>
 <pre><code>## Week
 ## weekday weekend 
 ##  0.8529  0.1471</code></pre>
-<pre class="r"><code>rm(temp)</code></pre>
 <p>Final restructuring and renaming of data below.</p>
 <pre class="r"><code>#some reordering and renaming of columns
 oyster_data &lt;- oyster_data[,c(&quot;Origin&quot;,
@@ -323,25 +325,6 @@ names(oyster_data) &lt;- c(&quot;Origin&quot;,
                         &quot;DailyCapping&quot;, 
                         &quot;FFare&quot;)</code></pre>
 <p>This is how the final data set looks like.</p>
-<pre class="r"><code>head(oyster_data, n = 5)</code></pre>
-<pre><code>##              Origin EntryDayNr EntryDay EnryWeek EntryHour EntryTime
-## 45990 Goodge Street          2      Mon  weekday      1000     16:40
-## 45995  Preston Road          5      Thu  weekday      1000     16:40
-## 45999       Holborn          5      Thu  weekday      1000     16:40
-## 46004   Earls Court          1      Sun  weekend      1000     16:40
-## 46006      Victoria          3      Tue  weekday      1000     16:40
-##             EntryDateTime   Destination ExitDayNr ExitDay ExitHour
-## 45990 2009-11-02 16:40:00    Totteridge         2     Mon     1041
-## 45995 2009-11-05 16:40:00     Northwood         5     Thu     1024
-## 45999 2009-11-05 16:40:00  Bounds Green         5     Thu     1028
-## 46004 2009-11-01 16:40:00       Pimlico         1     Sun     1021
-## 46006 2009-11-03 16:40:00 Bethnal Green         3     Tue     1027
-##       ExitTime        ExitDateTime JourneyType DailyCapping FFare
-## 45990    17:21 2009-11-02 17:21:00         TKT            N     0
-## 45995    17:04 2009-11-05 17:04:00         TKT            N     0
-## 45999    17:08 2009-11-05 17:08:00         TKT            N     0
-## 46004    17:01 2009-11-01 17:01:00         PPY            N   160
-## 46006    17:07 2009-11-03 17:07:00         TKT            N     0</code></pre>
 </div>
 <div id="data-fusion" class="section level2">
 <h2>Data Fusion</h2>

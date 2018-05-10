@@ -134,6 +134,7 @@ downo is a numeric day of week column with 1 being Sunday and 7 being Saturday. 
 oyster_data$daytype <- factor(oyster_data$daytype, 
                               levels = c("Mon","Tue","Wed",
                                          "Thu","Fri","Sat","Sun"))
+
 #presenting proportions of records by day
 temp <- prop.table(xtabs(~daytype, oyster_data))
 barplot(temp, col = RColorBrewer::brewer.pal(7, "Blues"), 
@@ -148,6 +149,7 @@ Now, I move on to cleaning text/character columns for start and end stations. He
 
 
 ```r
+#prepare those to be modified
 x <- c(" st " = " Street ", " STRT " = " Street ", 
        " Term " = " Terminal ", " Terms " = " Terminals ", 
        " Mkt " = " Market ", " Rd " = " Road ",
@@ -156,6 +158,8 @@ x <- c(" st " = " Street ", " STRT " = " Street ",
        " WAGN TOC Gates" = " ", " FGW" = "", " SCL" = "", " 
        TOCs" = "", " NR" = " ", "&" = "and")
 colrm <- c("StartStn", "EndStation")
+
+#replace
 oyster_data$StartStn <- stringr::str_replace_all(oyster_data$StartStn, x)
 oyster_data$EndStation <- stringr::str_replace_all(oyster_data$EndStation, x)
 oyster_data$Origin <- qdapRegex::rm_white(oyster_data$StartStn)
@@ -198,11 +202,11 @@ temp$ExTime <- temp$ExTime - 1440
 temp$downo <- temp$downo + 1
 levels(temp$daytype) <- c("Tue","Wed","Thu","Fri","Sat","Sun","Mon")
 temp$EntTimeHHMM <- sprintf("%02i:%02i", 
-                             lubridate::hour(lubridate::seconds_to_period(temp$EntTime*60)),
-                             lubridate::minute(lubridate::seconds_to_period(temp$EntTime*60)))
+                          lubridate::hour(lubridate::seconds_to_period(temp$EntTime*60)),
+                          lubridate::minute(lubridate::seconds_to_period(temp$EntTime*60)))
 temp$EXTimeHHMM <- sprintf("%02i:%02i", 
-                             lubridate::hour(lubridate::seconds_to_period(temp$ExTime*60)),
-                             lubridate::minute(lubridate::seconds_to_period(temp$ExTime*60)))
+                          lubridate::hour(lubridate::seconds_to_period(temp$ExTime*60)),
+                          lubridate::minute(lubridate::seconds_to_period(temp$ExTime*60)))
 oyster_data <- subset(oyster_data, EntTime <= 1440 | ExTime <= 1440)
 oyster_data <- rbind(oyster_data, temp)
 #for those with exit errors
@@ -226,30 +230,25 @@ Based on the modified entry and exit times for each journey, three columns are a
 ```r
 #create single entry/exit datetime columns
 oyster_data$EntryDateTime <- strptime(paste0(as.Date(paste0(oyster_data$downo, 
-                                                            "/11/2009 "), 
-                                         format = "%d/%m/%Y"), " ", 
-                                 oyster_data$EntTimeHHMM),
-                                  format = "%Y-%m-%d %H:%M")
+                                "/11/2009 "), format = "%d/%m/%Y"), " ", 
+                                oyster_data$EntTimeHHMM),
+                                format = "%Y-%m-%d %H:%M")
 oyster_data$ExitDateTime <- strptime(paste0(as.Date(paste0(oyster_data$downo_exit, 
-                                                      "/11/2009 "), 
-                                         format = "%d/%m/%Y"), " ", 
+                                 "/11/2009 "), format = "%d/%m/%Y"), " ", 
                                  oyster_data$EXTimeHHMM),
-                                  format = "%Y-%m-%d %H:%M")
+                                format = "%Y-%m-%d %H:%M")
+
 #based on the entry day, create weekend/weekday column
 oyster_data$Week <- ifelse(oyster_data$downo %in% c(1,7), 
                            "weekend", "weekday")
-temp <- prop.table(xtabs(~Week, oyster_data))
-temp
+#check proportions of weekend/day
+prop.table(xtabs(~Week, oyster_data))
 ```
 
 ```
 ## Week
 ## weekday weekend 
 ##  0.8529  0.1471
-```
-
-```r
-rm(temp)
 ```
 
 Final restructuring and renaming of data below.
@@ -294,30 +293,6 @@ names(oyster_data) <- c("Origin",
 This is how the final data set looks like.
 
 
-```r
-head(oyster_data, n = 5)
-```
-
-```
-##              Origin EntryDayNr EntryDay EnryWeek EntryHour EntryTime
-## 45990 Goodge Street          2      Mon  weekday      1000     16:40
-## 45995  Preston Road          5      Thu  weekday      1000     16:40
-## 45999       Holborn          5      Thu  weekday      1000     16:40
-## 46004   Earls Court          1      Sun  weekend      1000     16:40
-## 46006      Victoria          3      Tue  weekday      1000     16:40
-##             EntryDateTime   Destination ExitDayNr ExitDay ExitHour
-## 45990 2009-11-02 16:40:00    Totteridge         2     Mon     1041
-## 45995 2009-11-05 16:40:00     Northwood         5     Thu     1024
-## 45999 2009-11-05 16:40:00  Bounds Green         5     Thu     1028
-## 46004 2009-11-01 16:40:00       Pimlico         1     Sun     1021
-## 46006 2009-11-03 16:40:00 Bethnal Green         3     Tue     1027
-##       ExitTime        ExitDateTime JourneyType DailyCapping FFare
-## 45990    17:21 2009-11-02 17:21:00         TKT            N     0
-## 45995    17:04 2009-11-05 17:04:00         TKT            N     0
-## 45999    17:08 2009-11-05 17:08:00         TKT            N     0
-## 46004    17:01 2009-11-01 17:01:00         PPY            N   160
-## 46006    17:07 2009-11-03 17:07:00         TKT            N     0
-```
 
 ##Data Fusion
 ### Location Data
