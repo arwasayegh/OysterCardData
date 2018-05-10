@@ -2,9 +2,10 @@
 title: "Looking at Sample Oyster Data"
 author: "Arwa Sayegh"
 date: "10 May, 2018"
-output:  
-      html_document:  
-        keep_md: true 
+output:
+  html_document:
+    keep_md: yes
+  pdf_document: default
 ---
 
 
