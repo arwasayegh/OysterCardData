@@ -294,13 +294,13 @@ This is how the final data set looks like.
 
 
 
-##Data Fusion
+## Data Fusion
 ### Location Data
 
 For mapping purposes, I would like to fuse external data sets of the locations of the origin and destinations. Here, we extract spatial data of stations coordinates as well as the local authorities in which the stations are located.
 
 On it...
 
-###Distance Data
+### Distance Data
 
 On it...
