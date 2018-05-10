@@ -1,0 +1,205 @@
+---
+title: "Looking at Sample Oyster Data"
+author: "Arwa Sayegh"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Data Source
+
+Transport for London (TfL) provides Oyster card data which includes journey information for 5% sample of all oyster card data performed in a week during November 2009 on different public transport modes.
+
+Here, I am going to explore this data set. Will first start by cleaning it and selecting a subset of interest, which is journeys made by London Underground (LUL), National Rail (NR), Docklands Light Railway (DLR), and London Overground (LRc). So, the journeys that I have removed for now are the London Buses and Croydon Tram journeys; this is mainly because detailed information of entry and exit are not available for these journeys, but also because I am more interested in non-road transport modes where journey routes (thus, distances between origin stations and destination stations) are rather fixed.
+
+Here is how the data set looks like as a start:
+
+```{r data1, include=FALSE}
+library(RColorBrewer)
+oyster_data <- read.csv("..\\Nov09JnyExport.csv", header = TRUE)
+```
+
+```{r data2}
+nrow(oyster_data)
+head(oyster_data, n = 5)
+```
+
+The number of bus/TRAM journeys is 
+
+```{r data3}
+length(which(oyster_data$SubSystem %in% c("LTB","TRAM")))
+```
+
+## Data Manipulation
+
+```{r data4, include=FALSE}
+oyster_data <- subset(oyster_data, !SubSystem %in% c("LTB","TRAM"))
+```
+
+The data set is updated accordingly. There is also a number of journeys where either the start station or end station is not recorded. These are saved in a separate data frame which will be analysed later on to check the percentage of journeys per origin/destination, and to check for patterns of such cases.
+
+```{r data5}
+oyster_uns_unf <- subset(oyster_data, 
+                         StartStn == "Unstarted" | 
+                         EndStation %in% c("Unfinished","Not Applicable"))
+length(which(oyster_uns_unf$StartStn == "Unstarted"))
+length(which(oyster_uns_unf$EndStation %in% c("Unfinished","Not Applicable")))
+oyster_data <- subset(oyster_data, 
+                      StartStn != "Unstarted" &
+                      !(EndStation %in% c("Unfinished","Not Applicable")) & 
+                      as.character(StartStn) != as.character(EndStation) & 
+                      ExTime != 0)
+head(oyster_data)
+```
+
+So in one week, we have `r nrow(oyster_data)` records with complete information on start/end station and start/endtime. Now, I move into some plotting and cleaning of individual columns.
+
+downo is a numeric day of week column with 1 being Sunday and 7 being Saturday. daytype is a character column of the day of the week. We can see that the percentage of sampled journeys is lowest on weekends in comparison to weekdays, reflecting the lower PT demand during weekends.
+
+```{r dow}
+#adjusting factor levels
+oyster_data$daytype <- factor(oyster_data$daytype, 
+                              levels = c("Mon","Tue","Wed",
+                                         "Thu","Fri","Sat","Sun"))
+#presenting proportions of records by day
+temp <- prop.table(xtabs(~daytype, oyster_data))
+barplot(temp, col = RColorBrewer::brewer.pal(7, "Blues"), 
+        width = 0.2,
+        xlab = "Day of the Week", 
+        ylab = "Percentage of Total Journeys")
+```
+
+Now, I move on to cleaning text/character columns for start and end stations. Here I have used the stringr pacakge and its r str_replace_all function to replace multiple patterns found in a column at the same time. I have also used the qdapRegex package and its rm_white function to remove all unnecessary white spaces.
+
+```{r stations}
+x <- c(" st " = " Street ", " STRT " = " Street ", 
+       " Term " = " Terminal ", " Terms " = " Terminals ", 
+       " Mkt " = " Market ", " Rd " = " Road ",
+       " VIL " = " Village ", 
+       " RdandB'sby " = " Road and Barnsbury ", 
+       " WAGN TOC Gates" = " ", " FGW" = "", " SCL" = "", " 
+       TOCs" = "", " NR" = " ", "&" = "and")
+colrm <- c("StartStn", "EndStation")
+oyster_data$StartStn <- stringr::str_replace_all(oyster_data$StartStn, x)
+oyster_data$EndStation <- stringr::str_replace_all(oyster_data$EndStation, x)
+oyster_data$Origin <- qdapRegex::rm_white(oyster_data$StartStn)
+oyster_data$Destination <- qdapRegex::rm_white(oyster_data$EndStation)
+oyster_data <- oyster_data[,!names(oyster_data) %in% colrm]
+head(oyster_data, n = 5)
+```
+
+Now we have clean version of the origin and destination columns. The next step is to clean up the start and end time in order to calculate journey times. For the sake of this exercise, I assumed that the day of the month is the downo column, although it is not clear whether the data was extracted from a single week or sampled across different weeks in November. The assumption here won't make any difference; we only care that the days are in the right order which is the case. Before adjusting the time, there exist `r nrow(subset(oyster_data, EntTime > 1440))` rows where the entry time to the station was greater than 1440, `r nrow(subset(oyster_data, ExTime > 1440))` rows where the exit time from the station was greater than 1440, and `r nrow(subset(oyster_data, ExTime > 1440 & EntTime > 1440))` rows where both were greater than 1440; these are journeys started and/or finished after midnight, yet the recorded time/date did not capture that (kept them as previous days. So I have 
+
+
+```{r times}
+#modifying error in time/day
+#for those with both entry and exit errors
+temp <- subset(oyster_data, EntTime > 1440 & ExTime > 1440)
+temp$EntTime <- temp$EntTime - 1440
+temp$ExTime <- temp$ExTime - 1440
+temp$downo <- temp$downo + 1
+levels(temp$daytype) <- c("Tue","Wed","Thu","Fri","Sat","Sun","Mon")
+temp$EntTimeHHMM <- sprintf("%02i:%02i", 
+                             lubridate::hour(lubridate::seconds_to_period(temp$EntTime*60)),
+                             lubridate::minute(lubridate::seconds_to_period(temp$EntTime*60)))
+temp$EXTimeHHMM <- sprintf("%02i:%02i", 
+                             lubridate::hour(lubridate::seconds_to_period(temp$ExTime*60)),
+                             lubridate::minute(lubridate::seconds_to_period(temp$ExTime*60)))
+oyster_data <- subset(oyster_data, EntTime <= 1440 | ExTime <= 1440)
+oyster_data <- rbind(oyster_data, temp)
+#for those with exit errors
+oyster_data$daytype_exit <- oyster_data$daytype
+oyster_data$downo_exit <- oyster_data$downo
+temp <- subset(oyster_data, ExTime > 1440)
+temp$ExTime <- temp$ExTime - 1440
+temp$downo_exit <- temp$downo_exit + 1
+levels(temp$daytype_exit) <- c("Tue","Wed","Thu","Fri","Sat","Sun","Mon")
+temp$EXTimeHHMM <- sprintf("%02i:%02i", 
+                          lubridate::hour(lubridate::seconds_to_period(temp$ExTime*60)),
+                          lubridate::minute(lubridate::seconds_to_period(temp$ExTime*60)))
+oyster_data <- subset(oyster_data, ExTime <= 1440)
+oyster_data <- rbind(oyster_data, temp)
+rm(temp)
+```
+
+Based on the modified entry and exit times for each journey, three columns are added for the entry datetime, exit datetime, and entry type of day (weekend or weekday).
+
+```{r datetimeweek}
+#create single entry/exit datetime columns
+oyster_data$EntryDateTime <- strptime(paste0(as.Date(paste0(oyster_data$downo, 
+                                                            "/11/2009 "), 
+                                         format = "%d/%m/%Y"), " ", 
+                                 oyster_data$EntTimeHHMM),
+                                  format = "%Y-%m-%d %H:%M")
+oyster_data$ExitDateTime <- strptime(paste0(as.Date(paste0(oyster_data$downo_exit, 
+                                                      "/11/2009 "), 
+                                         format = "%d/%m/%Y"), " ", 
+                                 oyster_data$EXTimeHHMM),
+                                  format = "%Y-%m-%d %H:%M")
+#based on the entry day, create weekend/weekday column
+oyster_data$Week <- ifelse(oyster_data$downo %in% c(1,7), 
+                           "weekend", "weekday")
+temp <- prop.table(xtabs(~Week, oyster_data))
+temp
+rm(temp)
+
+```
+
+Final restructuring and renaming of data below.
+
+```{r dmfinal}
+#some reordering and renaming of columns
+oyster_data <- oyster_data[,c("Origin",
+                              "downo",
+                              "daytype",
+                              "Week",
+                              "EntTime",
+                              "EntTimeHHMM",
+                              "EntryDateTime",
+                              "Destination",
+                              "downo_exit",
+                              "daytype_exit",
+                              "ExTime",
+                              "EXTimeHHMM",
+                              "ExitDateTime",
+                              "JNYTYP", 
+                              "DailyCapping", 
+                              "FFare")]
+names(oyster_data) <- c("Origin",
+                        "EntryDayNr",
+                        "EntryDay",
+                        "EnryWeek",
+                        "EntryHour",
+                        "EntryTime",
+                        "EntryDateTime",
+                        "Destination",
+                        "ExitDayNr",
+                        "ExitDay",
+                        "ExitHour",
+                        "ExitTime",
+                        "ExitDateTime",
+                        "JourneyType", 
+                        "DailyCapping", 
+                        "FFare")
+
+```
+
+This is how the final data set looks like.
+
+```{r fd}
+head(oyster_data, n = 5)
+```
+
+##Data Fusion
+### Location Data
+
+For mapping purposes, I would like to fuse external data sets of the locations of the origin and destinations. Here, we extract spatial data of stations coordinates as well as the local authorities in which the stations are located.
+
+On it...
+
+###Distance Data
+
+On it...
