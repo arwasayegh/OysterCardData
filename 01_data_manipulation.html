@@ -368,9 +368,13 @@ names(oyster_data) &lt;- c(&quot;Origin&quot;,
 <h2>Data Fusion</h2>
 <div id="distance-data" class="section level3">
 <h3>Distance Data</h3>
-<p>Since we have the origin, destination, and mode for each journey, best way I can of for adding distance data is using Google Distance Matrix API. To do so there exist four data prepartion steps before extracting data efficiently.</p>
-<p>1- prepare origin/destination data in the form of station name (with + instead of spaces when the name has two or more words), the word “station”, and the word “london” e.g. origin Goodge Street would be “Goodge+Street+Station+London”. 2- prepare the journey mode based on Google definitions 3- prepare a list of all origin/destination/mode pairs in the data set 4- request an API key for the Distance Matrix<br />
-5- prepare a function that calls the url for each origin/destination/mode pair and extracts the distance 6- apply the function on each unique record and merge the final data set with the original oyster data set (all records).</p>
+<p>Since we have the origin, destination, and mode for each journey, best way I can think of for adding distance data is using Google Distance Matrix API. To do so there exist six data prepartion steps before extracting data efficiently. (error in distances?)</p>
+<p>1- prepare origin/destination data in the form of station name (with + instead of spaces when the name has two or more words), the word “station”, and the word “london” e.g. origin Goodge Street would be “Goodge+Street+Station+London”.</p>
+<p>2- prepare the journey mode based on Google definitions</p>
+<p>3- prepare a list of all origin/destination/mode pairs in the data set</p>
+<p>4- request an API key for the Distance Matrix</p>
+<p>5- prepare a function that calls the url for each origin/destination/mode pair and extracts the distance</p>
+<p>6- apply the function on each unique record and merge the final data set with the original oyster data set (all records).</p>
 <pre class="r"><code>#step 1
 oyster_data$OriginGoogle &lt;- paste0(gsub(&quot; &quot;, &quot;+&quot;, oyster_data$Origin), 
                                    &quot;+Station+London&quot;)

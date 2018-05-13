@@ -346,13 +346,18 @@ head(oyster_data, n = 5)
 ## Data Fusion
 ### Distance Data
 
-Since we have the origin, destination, and mode for each journey, best way I can of for adding distance data is using Google Distance Matrix API. To do so there exist four data prepartion steps before extracting data efficiently.
+Since we have the origin, destination, and mode for each journey, best way I can think of for adding distance data is using Google Distance Matrix API. To do so there exist six data prepartion steps before extracting data efficiently. (error in distances?)
 
 1- prepare origin/destination data in the form of station name (with + instead of spaces when the name has two or more words), the word "station", and the word "london" e.g. origin Goodge Street would be "Goodge+Street+Station+London".
+
 2- prepare the journey mode based on Google definitions
+
 3- prepare a list of all origin/destination/mode pairs in the data set
-4- request an API key for the Distance Matrix  
+
+4- request an API key for the Distance Matrix
+
 5- prepare a function that calls the url for each origin/destination/mode pair and extracts the distance
+
 6- apply the function on each unique record and merge the final data set with the original oyster data set (all records).
 
 
@@ -390,7 +395,6 @@ nrow(ogunique)
 ```
 
 ### Location Data
-
 
 For mapping purposes, I would like to fuse external data sets of the locations of the origin and destinations. Here, we extract spatial data of stations coordinates as well as the local authorities in which the stations are located.
 
