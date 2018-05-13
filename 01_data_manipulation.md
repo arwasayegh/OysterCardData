@@ -1,7 +1,7 @@
 ---
 title: "Looking at Sample Oyster Data"
 author: "Arwa Sayegh"
-date: "10 May, 2018"
+date: "13 May, 2018"
 output:
   html_document:
     keep_md: yes
@@ -150,7 +150,7 @@ Now, I move on to cleaning text/character columns for start and end stations. He
 
 ```r
 #prepare those to be modified
-x <- c(" st " = " Street ", " STRT " = " Street ", 
+y <- c(" st " = " Street ", " STRT " = " Street ", 
        " Term " = " Terminal ", " Terms " = " Terminals ", 
        " Mkt " = " Market ", " Rd " = " Road ",
        " VIL " = " Village ", 
@@ -160,10 +160,8 @@ x <- c(" st " = " Street ", " STRT " = " Street ",
 colrm <- c("StartStn", "EndStation")
 
 #replace
-oyster_data$StartStn <- stringr::str_replace_all(oyster_data$StartStn, x)
-oyster_data$EndStation <- stringr::str_replace_all(oyster_data$EndStation, x)
-oyster_data$Origin <- qdapRegex::rm_white(oyster_data$StartStn)
-oyster_data$Destination <- qdapRegex::rm_white(oyster_data$EndStation)
+oyster_data$Origin <- oyster_modify_txt(oyster_data$StartStn, y)
+oyster_data$Destination <- oyster_modify_txt(oyster_data$EndStation, y)
 oyster_data <- oyster_data[,!names(oyster_data) %in% colrm]
 head(oyster_data, n = 5)
 ```
@@ -200,25 +198,22 @@ temp <- subset(oyster_data, EntTime > 1440 & ExTime > 1440)
 temp$EntTime <- temp$EntTime - 1440
 temp$ExTime <- temp$ExTime - 1440
 temp$downo <- temp$downo + 1
-levels(temp$daytype) <- c("Tue","Wed","Thu","Fri","Sat","Sun","Mon")
-temp$EntTimeHHMM <- sprintf("%02i:%02i", 
-                          lubridate::hour(lubridate::seconds_to_period(temp$EntTime*60)),
-                          lubridate::minute(lubridate::seconds_to_period(temp$EntTime*60)))
-temp$EXTimeHHMM <- sprintf("%02i:%02i", 
-                          lubridate::hour(lubridate::seconds_to_period(temp$ExTime*60)),
-                          lubridate::minute(lubridate::seconds_to_period(temp$ExTime*60)))
+levels(temp$daytype) <- c("Tue","Wed","Thu",
+                          "Fri","Sat","Sun","Mon")
+temp$EntTimeHHMM <- oyster_hhmm(temp$EntTime)
+temp$EXTimeHHMM <- oyster_hhmm(temp$ExTime)
 oyster_data <- subset(oyster_data, EntTime <= 1440 | ExTime <= 1440)
 oyster_data <- rbind(oyster_data, temp)
+
 #for those with exit errors
 oyster_data$daytype_exit <- oyster_data$daytype
 oyster_data$downo_exit <- oyster_data$downo
 temp <- subset(oyster_data, ExTime > 1440)
 temp$ExTime <- temp$ExTime - 1440
 temp$downo_exit <- temp$downo_exit + 1
-levels(temp$daytype_exit) <- c("Tue","Wed","Thu","Fri","Sat","Sun","Mon")
-temp$EXTimeHHMM <- sprintf("%02i:%02i", 
-                          lubridate::hour(lubridate::seconds_to_period(temp$ExTime*60)),
-                          lubridate::minute(lubridate::seconds_to_period(temp$ExTime*60)))
+levels(temp$daytype_exit) <- c("Tue","Wed","Thu",
+                               "Fri","Sat","Sun","Mon")
+temp$EXTimeHHMM <- oyster_hhmm(temp$ExTime)
 oyster_data <- subset(oyster_data, ExTime <= 1440)
 oyster_data <- rbind(oyster_data, temp)
 rm(temp)
@@ -229,18 +224,17 @@ Based on the modified entry and exit times for each journey, three columns are a
 
 ```r
 #create single entry/exit datetime columns
-oyster_data$EntryDateTime <- strptime(paste0(as.Date(paste0(oyster_data$downo, 
-                                "/11/2009 "), format = "%d/%m/%Y"), " ", 
-                                oyster_data$EntTimeHHMM),
-                                format = "%Y-%m-%d %H:%M")
-oyster_data$ExitDateTime <- strptime(paste0(as.Date(paste0(oyster_data$downo_exit, 
-                                 "/11/2009 "), format = "%d/%m/%Y"), " ", 
-                                 oyster_data$EXTimeHHMM),
-                                format = "%Y-%m-%d %H:%M")
+oyster_data$EntryDateTime <- oyster_datetime(x = oyster_data$EntTimeHHMM, 
+                                             y = oyster_data$downo,
+                                             month = 11, year = 2009)
+oyster_data$ExitDateTime <- oyster_datetime(x = oyster_data$EXTimeHHMM, 
+                                             y = oyster_data$downo_exit,
+                                             month = 11, year = 2009)
 
 #based on the entry day, create weekend/weekday column
 oyster_data$Week <- ifelse(oyster_data$downo %in% c(1,7), 
                            "weekend", "weekday")
+
 #check proportions of weekend/day
 prop.table(xtabs(~Week, oyster_data))
 ```
@@ -250,6 +244,27 @@ prop.table(xtabs(~Week, oyster_data))
 ## weekday weekend 
 ##  0.8529  0.1471
 ```
+
+Given the final entry and exit datetimes, we can calculate journey times and explore their distributions by the week, weekday, origin/destination pairs, etc.... Here we keep it simple and Will keep further exploration of journey times once we fuse other data sets with Oyster data.
+
+
+```r
+#calculating journey times
+oyster_data$JTMins <- as.numeric(oyster_data$ExitDateTime - 
+                                   oyster_data$EntryDateTime)/60
+library(ggplot2)
+ggplot(oyster_data, aes(x = JTMins)) + 
+  geom_histogram(aes(y = ..density..), bins = 50, 
+                 alpha = 0.25, color = "darkgreen", fill="lightgreen") +
+  geom_density(alpha = .15, color = "darkgreen", fill="lightgreen")  + 
+  labs(x = "Journey Times (Mins)", y = "Density") + 
+  geom_vline(aes(xintercept = mean(JTMins)),
+            color = "black", linetype = "dashed") + 
+  annotate("text", x = mean(oyster_data$JTMins) + 25, y = 0.0375, 
+           label = paste0("Avg. ", round(mean(oyster_data$JTMins), 0), " minutes"))
+```
+
+![](01_data_manipulation_files/figure-html/journeytimes-1.png)<!-- -->
 
 Final restructuring and renaming of data below.
 
@@ -269,6 +284,8 @@ oyster_data <- oyster_data[,c("Origin",
                               "ExTime",
                               "EXTimeHHMM",
                               "ExitDateTime",
+                              "JTMins",
+                              "SubSystem",
                               "JNYTYP", 
                               "DailyCapping", 
                               "FFare")]
@@ -276,15 +293,17 @@ names(oyster_data) <- c("Origin",
                         "EntryDayNr",
                         "EntryDay",
                         "EnryWeek",
-                        "EntryHour",
+                        "EntryMins",
                         "EntryTime",
                         "EntryDateTime",
                         "Destination",
                         "ExitDayNr",
                         "ExitDay",
-                        "ExitHour",
+                        "ExitMins",
                         "ExitTime",
                         "ExitDateTime",
+                        "JTMins",
+                        "Mode",
                         "JourneyType", 
                         "DailyCapping", 
                         "FFare")
@@ -293,14 +312,86 @@ names(oyster_data) <- c("Origin",
 This is how the final data set looks like.
 
 
+```r
+head(oyster_data, n = 5)
+```
+
+```
+##              Origin EntryDayNr EntryDay EnryWeek EntryMins EntryTime
+## 45990 Goodge Street          2      Mon  weekday      1000     16:40
+## 45995  Preston Road          5      Thu  weekday      1000     16:40
+## 45999       Holborn          5      Thu  weekday      1000     16:40
+## 46004   Earls Court          1      Sun  weekend      1000     16:40
+## 46006      Victoria          3      Tue  weekday      1000     16:40
+##             EntryDateTime   Destination ExitDayNr ExitDay ExitMins
+## 45990 2009-11-02 16:40:00    Totteridge         2     Mon     1041
+## 45995 2009-11-05 16:40:00     Northwood         5     Thu     1024
+## 45999 2009-11-05 16:40:00  Bounds Green         5     Thu     1028
+## 46004 2009-11-01 16:40:00       Pimlico         1     Sun     1021
+## 46006 2009-11-03 16:40:00 Bethnal Green         3     Tue     1027
+##       ExitTime        ExitDateTime JTMins Mode JourneyType DailyCapping
+## 45990    17:21 2009-11-02 17:21:00     41  LUL         TKT            N
+## 45995    17:04 2009-11-05 17:04:00     24  LUL         TKT            N
+## 45999    17:08 2009-11-05 17:08:00     28  LUL         TKT            N
+## 46004    17:01 2009-11-01 17:01:00     21  LUL         PPY            N
+## 46006    17:07 2009-11-03 17:07:00     27  LUL         TKT            N
+##       FFare
+## 45990     0
+## 45995     0
+## 45999     0
+## 46004   160
+## 46006     0
+```
 
 ## Data Fusion
+### Distance Data
+
+Since we have the origin, destination, and mode for each journey, best way I can of for adding distance data is using Google Distance Matrix API. To do so there exist four data prepartion steps before extracting data efficiently.
+
+1- prepare origin/destination data in the form of station name (with + instead of spaces when the name has two or more words), the word "station", and the word "london" e.g. origin Goodge Street would be "Goodge+Street+Station+London".
+2- prepare the journey mode based on Google definitions
+3- prepare a list of all origin/destination/mode pairs in the data set
+4- request an API key for the Distance Matrix  
+5- prepare a function that calls the url for each origin/destination/mode pair and extracts the distance
+6- apply the function on each unique record and merge the final data set with the original oyster data set (all records).
+
+
+```r
+#step 1
+oyster_data$OriginGoogle <- paste0(gsub(" ", "+", oyster_data$Origin), 
+                                   "+Station+London")
+oyster_data$DestinationGoogle <- paste0(gsub(" ", "+", oyster_data$Destination), 
+                                        "+Station+London")
+#step 2
+oyster_data$ModeGoogle <- oyster_googlemode_all(oyster_data$Mode)
+#step 3
+ogunique <- unique(oyster_data[,c("OriginGoogle", 
+                                "DestinationGoogle",
+                                "ModeGoogle")])
+#check unique data
+head(ogunique, n = 5)
+```
+
+```
+##                       OriginGoogle            DestinationGoogle ModeGoogle
+## 45990 Goodge+Street+Station+London    Totteridge+Station+London     Subway
+## 45995  Preston+Road+Station+London     Northwood+Station+London     Subway
+## 45999       Holborn+Station+London  Bounds+Green+Station+London     Subway
+## 46004   Earls+Court+Station+London       Pimlico+Station+London     Subway
+## 46006      Victoria+Station+London Bethnal+Green+Station+London     Subway
+```
+
+```r
+nrow(ogunique)
+```
+
+```
+## [1] 55614
+```
+
 ### Location Data
 
+
 For mapping purposes, I would like to fuse external data sets of the locations of the origin and destinations. Here, we extract spatial data of stations coordinates as well as the local authorities in which the stations are located.
-
-On it...
-
-### Distance Data
 
 On it...
