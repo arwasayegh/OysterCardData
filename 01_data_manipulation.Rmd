@@ -81,23 +81,46 @@ Now, I move on to cleaning text/character columns for start and end stations. He
 
 ```{r stations}
 #prepare those to be modified
-y <- c(" st " = " Street ", " STRT " = " Street ", 
+replace <- 	c(" st " = " Street ", " STRT " = " Street ", 
        " Term " = " Terminal ", " Terms " = " Terminals ", 
-       " Mkt " = " Market ", " Rd " = " Road ",
-       " VIL " = " Village ", 
-       " RdandB'sby " = " Road and Barnsbury ", 
-       " WAGN TOC Gates" = " ", " FGW" = "", " SCL" = "", " 
-       TOCs" = "", " NR" = " ", "&" = "and")
+       " Mkt " = " Market ", " Rd " = " Road ", " Rd$" = " Road",
+       " VIL " = " Village ", " SR$" = "", " RdandB'sby " = " Road and Barnsbury ", 
+       " WAGN TOC Gates" = " ", " FGW$" = "", " SCL$" = "", 
+       " JLE$" = "", " TOCs$" = "", " NR" = " ", "&" = "and",
+       "Battersea Park" = "Battersea", "Bromley By Bow" = "Bromley-By-Bow", 
+       "Caledonian RdandB'sby" = "Caledonian Road and Barnsbury",
+       " DLR" = "", " E2$" = "",
+       "Crossharbour" = "Crossharbour and London Arena",
+       " Pk$" = " Park", " B$" = ""," M$" = "", " M$" = "", " T$" = "", 
+       "Harringay Green Las" = "Harringay Green Lanes",
+       "Harrow On The Hill" = "Harrow-on-the-Hill",
+       "Harrow Wealdstone" = "Harrow and Wealdstone",
+       "High Street Kens" = "High Street Kensington",
+       "Highbury" = "Highbury and Islington",
+       "Kensington Olympia" = "Kensington (Olympia)",
+       "Rainham Essex" = "Rainham",
+       "Shepherd's Bush Mkt" = "Shepherds Bush", 
+       "Shepherd's Bush Und" = "Shepherds Bush Und",
+       "South Greenford" = "Greenford",
+       "St Johns Wood" = "St Johns",
+       "St Pancras International" = "St Pancras",
+       "Sutton Surrey" = "Sutton", "Totteridge" = "Totteridge and Whetstone",
+       "Walthamstow Qns R" = "Walthamstow Queens Road",
+       "Watford Met" = "Watford", "West Hampst'd NL" = "West Hampstead",
+       "West Hampst'd Tlink" = "West Hampstead Thameslink", 
+       "SudburyandHarrow" = "Sudbury and Harrow",
+       " St$" = " Street", "Fenchurch St" = "Fenchurch Street",
+       "Edgawre$" = "Edgware Road", "Hammersmith D" = "Hammersmith", "'" = "")
 colrm <- c("StartStn", "EndStation")
 
 #replace
-oyster_data$Origin <- oyster_modify_txt(oyster_data$StartStn, y)
-oyster_data$Destination <- oyster_modify_txt(oyster_data$EndStation, y)
+oyster_data$Origin <- oyster_modify_txt(oyster_data$StartStn, replace)
+oyster_data$Destination <- oyster_modify_txt(oyster_data$EndStation, replace)
 oyster_data <- oyster_data[,!names(oyster_data) %in% colrm]
 head(oyster_data, n = 5)
 ```
 
-Now we have clean version of the origin and destination columns. The next step is to clean up the start and end time in order to calculate journey times. For the sake of this exercise, I assumed that the day of the month is the downo column, although it is not clear whether the data was extracted from a single week or sampled across different weeks in November. The assumption here won't make any difference; we only care that the days are in the right order which is the case. Before adjusting the time, there exist `r nrow(subset(oyster_data, EntTime > 1440))` rows where the entry time to the station was greater than 1440, `r nrow(subset(oyster_data, ExTime > 1440))` rows where the exit time from the station was greater than 1440, and `r nrow(subset(oyster_data, ExTime > 1440 & EntTime > 1440))` rows where both were greater than 1440; these are journeys started and/or finished after midnight, yet the recorded time/date did not capture that (kept them as previous days. So I have 
+Now we have clean version of the origin and destination columns. The next step is to clean up the start and end time in order to calculate journey times. For the sake of this exercise, I assumed that the day of the month is the downo column, although it is not clear whether the data was extracted from a single week or sampled across different weeks in November. The assumption here won't make any difference; we only care that the days are in the right order which is the case. Before adjusting the time, there exist `r nrow(subset(oyster_data, EntTime > 1440))` rows where the entry time to the station was greater than 1440, `r nrow(subset(oyster_data, ExTime > 1440))` rows where the exit time from the station was greater than 1440, and `r nrow(subset(oyster_data, ExTime > 1440 & EntTime > 1440))` rows where both were greater than 1440; these are journeys which have started and/or finished after midnight, yet the recorded time/date did not capture that (kept them as previous days).
 
 
 ```{r times}
@@ -206,7 +229,6 @@ names(oyster_data) <- c("Origin",
                         "JourneyType", 
                         "DailyCapping", 
                         "FFare")
-
 ```
 
 This is how the final data set looks like.
@@ -216,9 +238,51 @@ head(oyster_data, n = 5)
 ```
 
 ## Data Fusion
+### Location Data
+
+For mapping purposes, I would like to fuse other data sets on the locations of the origin and destinations. Here, I extracted spatial data of stations coordinates from both the TfL open data site for most London underground stations, complemented by a wikipedia page where the location of rail stations are tabulated. By running the below, two columns of Longitude/Latitude are added based on the origin station, and two columns based on the destination station.
+
+```{r locations}
+tflstations <- oyster_kml(kml = "..\\tflstations.kml", 
+                          source = "TfL")
+tflstations$Location <- gsub(" Station", "", tflstations$Location)
+
+wikistations <- oyster_kml(kml = "..\\wikistations.kml", 
+                          source = "Wiki")
+stations <- rbind(tflstations, wikistations)
+
+#modifying location names to match with oyster data
+replace <- c("Hammersmith \\(D and P\\)" = "Hammersmith D",
+             "Shepherds Bush Hammersmith and City" = "Shepherds Bush Und",
+             "Shepherds Bush Central" = "Shepherds Bush",
+             "&" = "and", " B$" = "", " C$" = "", 
+             "'" = "", "St. " = "St ", "1,2, 3" = "123")
+stations$Location <- oyster_modify_txt(stations$Location, replace)
+stations <- stations[!duplicated(stations$Location),]
+
+#merge with origin and rename added columns
+oyster_data <- merge(oyster_data, stations[,2:4], 
+                            by.x = "Origin",
+                            by.y = "Location", 
+                            all.x = TRUE)
+temp <- (ncol(oyster_data)-1):ncol(oyster_data)
+names(oyster_data)[temp] <- paste0("Origin", 
+                                   names(oyster_data)[temp])
+
+#merge with destination and rename added columns
+oyster_data <- merge(oyster_data, stations[,2:4], 
+                            by.x = "Destination",
+                            by.y = "Location", 
+                            all.x = TRUE)
+temp <- (ncol(oyster_data)-1):ncol(oyster_data)
+names(oyster_data)[temp] <- paste0("Destination",
+                                   names(oyster_data)[temp])
+head(oyster_data)
+```
+
 ### Distance Data
 
-Since we have the origin, destination, and mode for each journey, best way I can think of for adding distance data is using Google Distance Matrix API. To do so there exist six data prepartion steps before extracting data efficiently. (error in distances?)
+Since we have the origin, destination, and mode for each journey, best way I can think of for adding hourney distance is using Google Distance Matrix API. To do so there exist six data prepartion steps before extracting the data efficiently. (error in distances?)
 
 1- prepare origin/destination data in the form of station name (with + instead of spaces when the name has two or more words), the word "station", and the word "london" e.g. origin Goodge Street would be "Goodge+Street+Station+London".
 
@@ -249,8 +313,4 @@ head(ogunique, n = 5)
 nrow(ogunique)
 ```
 
-### Location Data
-
-For mapping purposes, I would like to fuse external data sets of the locations of the origin and destinations. Here, we extract spatial data of stations coordinates as well as the local authorities in which the stations are located.
-
-On it...
+On it ...find another way result of call limits?

@@ -1,3 +1,4 @@
+#a list of R functions supporting the analysis
 #function to replace values in vector x with y
 #and remove white spaces
 oyster_modify_txt <- function(x, y) {
@@ -24,6 +25,7 @@ oyster_hhmm <- function(x) {
   
 }
 
+#create datetime
 oyster_datetime <- function(x, y, month = 11, year = 2009) {
   #prepare date text
   y1 <- paste0(y, "/", month, "/", year)
@@ -36,29 +38,46 @@ oyster_datetime <- function(x, y, month = 11, year = 2009) {
   
 }
 
+#read data from kml file
+oyster_kml <- function(kml, source) {
+  #read kml file
+  x <- rgdal::readOGR(kml)
+  #extract relevant data
+  y <- data.frame(Source = source, 
+                  x@data[,1],
+                  x@coords[,1:2])
+  #name them
+  names(y)[2:4] <- c("Location", 
+                     "Longitude",
+                     "Latitude")
+  #return
+  y
+  
+}
+
+#create mode column based on google distance matrix api definitions
 oyster_googlemode <- function(x) {
   
   y <- if(x %in% c("DLR","DLR/LRC","LRC","TRAM")) {
-       "Tram"
-    } else if(x %in% c("HEX","LUL/NR/DLR","LUL/NR/LRC")) {
-      "Rail"
-    } else if(x %in% c("LUL/DLR","LUL/LRC","LUL/NR","LUL/TRAM")) {
-      "Subway|Tram"
-    } else if(x == "NR") {
-      "Train"
-    } else if(x %in% c("NR/DLR","NR/LRC")) {
-      "Train|Tram"  
-    } else {
-      "Subway"
-    }
+    "Tram"
+  } else if(x %in% c("HEX","LUL/NR/DLR","LUL/NR/LRC")) {
+    "Rail"
+  } else if(x %in% c("LUL/DLR","LUL/LRC","LUL/NR","LUL/TRAM")) {
+    "Subway|Tram"
+  } else if(x == "NR") {
+    "Train"
+  } else if(x %in% c("NR/DLR","NR/LRC")) {
+    "Train|Tram"  
+  } else {
+    "Subway"
+  }
   y  
 }
-
+#apply the previous function for the entire column in the data set
 oyster_googlemode_all <- function(x) {
   
   y <- sapply(x, oyster_googlemode, simplify = TRUE)
   y
   
 }
-
 

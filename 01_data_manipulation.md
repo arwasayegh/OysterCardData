@@ -1,7 +1,7 @@
 ---
 title: "Looking at Sample Oyster Data"
 author: "Arwa Sayegh"
-date: "13 May, 2018"
+date: "14 May, 2018"
 output:
   html_document:
     keep_md: yes
@@ -150,18 +150,41 @@ Now, I move on to cleaning text/character columns for start and end stations. He
 
 ```r
 #prepare those to be modified
-y <- c(" st " = " Street ", " STRT " = " Street ", 
+replace <- 	c(" st " = " Street ", " STRT " = " Street ", 
        " Term " = " Terminal ", " Terms " = " Terminals ", 
-       " Mkt " = " Market ", " Rd " = " Road ",
-       " VIL " = " Village ", 
-       " RdandB'sby " = " Road and Barnsbury ", 
-       " WAGN TOC Gates" = " ", " FGW" = "", " SCL" = "", " 
-       TOCs" = "", " NR" = " ", "&" = "and")
+       " Mkt " = " Market ", " Rd " = " Road ", " Rd$" = " Road",
+       " VIL " = " Village ", " SR$" = "", " RdandB'sby " = " Road and Barnsbury ", 
+       " WAGN TOC Gates" = " ", " FGW$" = "", " SCL$" = "", 
+       " JLE$" = "", " TOCs$" = "", " NR" = " ", "&" = "and",
+       "Battersea Park" = "Battersea", "Bromley By Bow" = "Bromley-By-Bow", 
+       "Caledonian RdandB'sby" = "Caledonian Road and Barnsbury",
+       " DLR" = "", " E2$" = "",
+       "Crossharbour" = "Crossharbour and London Arena",
+       " Pk$" = " Park", " B$" = ""," M$" = "", " M$" = "", " T$" = "", 
+       "Harringay Green Las" = "Harringay Green Lanes",
+       "Harrow On The Hill" = "Harrow-on-the-Hill",
+       "Harrow Wealdstone" = "Harrow and Wealdstone",
+       "High Street Kens" = "High Street Kensington",
+       "Highbury" = "Highbury and Islington",
+       "Kensington Olympia" = "Kensington (Olympia)",
+       "Rainham Essex" = "Rainham",
+       "Shepherd's Bush Mkt" = "Shepherds Bush", 
+       "Shepherd's Bush Und" = "Shepherds Bush Und",
+       "South Greenford" = "Greenford",
+       "St Johns Wood" = "St Johns",
+       "St Pancras International" = "St Pancras",
+       "Sutton Surrey" = "Sutton", "Totteridge" = "Totteridge and Whetstone",
+       "Walthamstow Qns R" = "Walthamstow Queens Road",
+       "Watford Met" = "Watford", "West Hampst'd NL" = "West Hampstead",
+       "West Hampst'd Tlink" = "West Hampstead Thameslink", 
+       "SudburyandHarrow" = "Sudbury and Harrow",
+       " St$" = " Street", "Fenchurch St" = "Fenchurch Street",
+       "Edgawre$" = "Edgware Road", "Hammersmith D" = "Hammersmith", "'" = "")
 colrm <- c("StartStn", "EndStation")
 
 #replace
-oyster_data$Origin <- oyster_modify_txt(oyster_data$StartStn, y)
-oyster_data$Destination <- oyster_modify_txt(oyster_data$EndStation, y)
+oyster_data$Origin <- oyster_modify_txt(oyster_data$StartStn, replace)
+oyster_data$Destination <- oyster_modify_txt(oyster_data$EndStation, replace)
 oyster_data <- oyster_data[,!names(oyster_data) %in% colrm]
 head(oyster_data, n = 5)
 ```
@@ -179,15 +202,15 @@ head(oyster_data, n = 5)
 ## 45999   Z0104    TKT            N     0     0      XX
 ## 46004 -------    PPY            N   160   160      XX
 ## 46006   Z0102    TKT            N     0     0      XX
-##                  FinalProduct        Origin   Destination
-## 45990  Freedom Pass (Elderly) Goodge Street    Totteridge
-## 45995 Freedom Pass (Disabled)  Preston Road     Northwood
-## 45999   LUL Travelcard-Annual       Holborn  Bounds Green
-## 46004                    PAYG   Earls Court       Pimlico
-## 46006    LUL Travelcard-7 Day      Victoria Bethnal Green
+##                  FinalProduct        Origin              Destination
+## 45990  Freedom Pass (Elderly) Goodge Street Totteridge and Whetstone
+## 45995 Freedom Pass (Disabled)  Preston Road                Northwood
+## 45999   LUL Travelcard-Annual       Holborn             Bounds Green
+## 46004                    PAYG   Earls Court                  Pimlico
+## 46006    LUL Travelcard-7 Day      Victoria            Bethnal Green
 ```
 
-Now we have clean version of the origin and destination columns. The next step is to clean up the start and end time in order to calculate journey times. For the sake of this exercise, I assumed that the day of the month is the downo column, although it is not clear whether the data was extracted from a single week or sampled across different weeks in November. The assumption here won't make any difference; we only care that the days are in the right order which is the case. Before adjusting the time, there exist 2701 rows where the entry time to the station was greater than 1440, 8186 rows where the exit time from the station was greater than 1440, and 2701 rows where both were greater than 1440; these are journeys started and/or finished after midnight, yet the recorded time/date did not capture that (kept them as previous days. So I have 
+Now we have clean version of the origin and destination columns. The next step is to clean up the start and end time in order to calculate journey times. For the sake of this exercise, I assumed that the day of the month is the downo column, although it is not clear whether the data was extracted from a single week or sampled across different weeks in November. The assumption here won't make any difference; we only care that the days are in the right order which is the case. Before adjusting the time, there exist 2701 rows where the entry time to the station was greater than 1440, 8186 rows where the exit time from the station was greater than 1440, and 2701 rows where both were greater than 1440; these are journeys which have started and/or finished after midnight, yet the recorded time/date did not capture that (kept them as previous days).
 
 
 
@@ -323,30 +346,124 @@ head(oyster_data, n = 5)
 ## 45999       Holborn          5      Thu  weekday      1000     16:40
 ## 46004   Earls Court          1      Sun  weekend      1000     16:40
 ## 46006      Victoria          3      Tue  weekday      1000     16:40
-##             EntryDateTime   Destination ExitDayNr ExitDay ExitMins
-## 45990 2009-11-02 16:40:00    Totteridge         2     Mon     1041
-## 45995 2009-11-05 16:40:00     Northwood         5     Thu     1024
-## 45999 2009-11-05 16:40:00  Bounds Green         5     Thu     1028
-## 46004 2009-11-01 16:40:00       Pimlico         1     Sun     1021
-## 46006 2009-11-03 16:40:00 Bethnal Green         3     Tue     1027
-##       ExitTime        ExitDateTime JTMins Mode JourneyType DailyCapping
-## 45990    17:21 2009-11-02 17:21:00     41  LUL         TKT            N
-## 45995    17:04 2009-11-05 17:04:00     24  LUL         TKT            N
-## 45999    17:08 2009-11-05 17:08:00     28  LUL         TKT            N
-## 46004    17:01 2009-11-01 17:01:00     21  LUL         PPY            N
-## 46006    17:07 2009-11-03 17:07:00     27  LUL         TKT            N
-##       FFare
-## 45990     0
-## 45995     0
-## 45999     0
-## 46004   160
-## 46006     0
+##             EntryDateTime              Destination ExitDayNr ExitDay
+## 45990 2009-11-02 16:40:00 Totteridge and Whetstone         2     Mon
+## 45995 2009-11-05 16:40:00                Northwood         5     Thu
+## 45999 2009-11-05 16:40:00             Bounds Green         5     Thu
+## 46004 2009-11-01 16:40:00                  Pimlico         1     Sun
+## 46006 2009-11-03 16:40:00            Bethnal Green         3     Tue
+##       ExitMins ExitTime        ExitDateTime JTMins Mode JourneyType
+## 45990     1041    17:21 2009-11-02 17:21:00     41  LUL         TKT
+## 45995     1024    17:04 2009-11-05 17:04:00     24  LUL         TKT
+## 45999     1028    17:08 2009-11-05 17:08:00     28  LUL         TKT
+## 46004     1021    17:01 2009-11-01 17:01:00     21  LUL         PPY
+## 46006     1027    17:07 2009-11-03 17:07:00     27  LUL         TKT
+##       DailyCapping FFare
+## 45990            N     0
+## 45995            N     0
+## 45999            N     0
+## 46004            N   160
+## 46006            N     0
 ```
 
 ## Data Fusion
+### Location Data
+
+For mapping purposes, I would like to fuse other data sets on the locations of the origin and destinations. Here, I extracted spatial data of stations coordinates from both the TfL open data site for most London underground stations, complemented by a wikipedia page where the location of rail stations are tabulated. By running the below, two columns of Longitude/Latitude are added based on the origin station, and two columns based on the destination station.
+
+
+```r
+tflstations <- oyster_kml(kml = "..\\tflstations.kml", 
+                          source = "TfL")
+```
+
+```
+## OGR data source with driver: KML 
+## Source: "C:\Users\Arwa\Desktop\SideProject\tflstations.kml", layer: "Transport for London Stations"
+## with 302 features
+## It has 2 fields
+```
+
+```r
+tflstations$Location <- gsub(" Station", "", tflstations$Location)
+
+wikistations <- oyster_kml(kml = "..\\wikistations.kml", 
+                          source = "Wiki")
+```
+
+```
+## OGR data source with driver: KML 
+## Source: "C:\Users\Arwa\Desktop\SideProject\wikistations.kml", layer: "List of stations"
+## with 369 features
+## It has 2 fields
+```
+
+```r
+stations <- rbind(tflstations, wikistations)
+
+#modifying location names to match with oyster data
+replace <- c("Hammersmith \\(D and P\\)" = "Hammersmith D",
+             "Shepherds Bush Hammersmith and City" = "Shepherds Bush Und",
+             "Shepherds Bush Central" = "Shepherds Bush",
+             "&" = "and", " B$" = "", " C$" = "", 
+             "'" = "", "St. " = "St ", "1,2, 3" = "123")
+stations$Location <- oyster_modify_txt(stations$Location, replace)
+stations <- stations[!duplicated(stations$Location),]
+
+#merge with origin and rename added columns
+oyster_data <- merge(oyster_data, stations[,2:4], 
+                            by.x = "Origin",
+                            by.y = "Location", 
+                            all.x = TRUE)
+temp <- (ncol(oyster_data)-1):ncol(oyster_data)
+names(oyster_data)[temp] <- paste0("Origin", 
+                                   names(oyster_data)[temp])
+
+#merge with destination and rename added columns
+oyster_data <- merge(oyster_data, stations[,2:4], 
+                            by.x = "Destination",
+                            by.y = "Location", 
+                            all.x = TRUE)
+temp <- (ncol(oyster_data)-1):ncol(oyster_data)
+names(oyster_data)[temp] <- paste0("Destination",
+                                   names(oyster_data)[temp])
+head(oyster_data)
+```
+
+```
+##     Destination             Origin EntryDayNr EntryDay EnryWeek EntryMins
+## 1 Acton Central           Richmond          3      Tue  weekday      1094
+## 2 Acton Central Willesden Junction          4      Wed  weekday      1158
+## 3 Acton Central   Stonebridge Park          6      Fri  weekday       463
+## 4 Acton Central             Euston          5      Thu  weekday      1239
+## 5 Acton Central        Brondesbury          5      Thu  weekday      1107
+## 6 Acton Central        Brondesbury          3      Tue  weekday       995
+##   EntryTime       EntryDateTime ExitDayNr ExitDay ExitMins ExitTime
+## 1     18:14 2009-11-03 18:14:00         3     Tue     1112    18:32
+## 2     19:18 2009-11-04 19:18:00         4     Wed     1182    19:42
+## 3     07:43 2009-11-06 07:43:00         6     Fri      496    08:16
+## 4     20:39 2009-11-05 20:39:00         5     Thu     1301    21:41
+## 5     18:27 2009-11-05 18:27:00         5     Thu     1133    18:53
+## 6     16:35 2009-11-03 16:35:00         3     Tue     1017    16:57
+##          ExitDateTime JTMins       Mode JourneyType DailyCapping FFare
+## 1 2009-11-03 18:32:00     18         NR         PPY            N    55
+## 2 2009-11-04 19:42:00     24         NR         PPY            N   110
+## 3 2009-11-06 08:16:00     33        LRC         TKT            N     0
+## 4 2009-11-05 21:41:00     62 LUL/NR/LRC         PPY            N   220
+## 5 2009-11-05 18:53:00     26     NR/LRC         TKT            N     0
+## 6 2009-11-03 16:57:00     22     NR/LRC         TKT            N     0
+##   OriginLongitude OriginLatitude DestinationLongitude DestinationLatitude
+## 1         -0.3018          51.46              -0.2634               51.51
+## 2         -0.2443          51.53              -0.2634               51.51
+## 3         -0.2754          51.54              -0.2634               51.51
+## 4         -0.1333          51.53              -0.2634               51.51
+## 5         -0.2020          51.55              -0.2634               51.51
+## 6         -0.2020          51.55              -0.2634               51.51
+```
+
 ### Distance Data
 
-Since we have the origin, destination, and mode for each journey, best way I can think of for adding distance data is using Google Distance Matrix API. To do so there exist six data prepartion steps before extracting data efficiently. (error in distances?)
+Since we have the origin, destination, and mode for each journey, best way I can think of for adding hourney distance is using Google Distance Matrix API. To do so there exist six data prepartion steps before extracting the data efficiently. (error in distances?)
 
 1- prepare origin/destination data in the form of station name (with + instead of spaces when the name has two or more words), the word "station", and the word "london" e.g. origin Goodge Street would be "Goodge+Street+Station+London".
 
@@ -378,12 +495,18 @@ head(ogunique, n = 5)
 ```
 
 ```
-##                       OriginGoogle            DestinationGoogle ModeGoogle
-## 45990 Goodge+Street+Station+London    Totteridge+Station+London     Subway
-## 45995  Preston+Road+Station+London     Northwood+Station+London     Subway
-## 45999       Holborn+Station+London  Bounds+Green+Station+London     Subway
-## 46004   Earls+Court+Station+London       Pimlico+Station+London     Subway
-## 46006      Victoria+Station+London Bethnal+Green+Station+London     Subway
+##                        OriginGoogle            DestinationGoogle
+## 1           Richmond+Station+London Acton+Central+Station+London
+## 2 Willesden+Junction+Station+London Acton+Central+Station+London
+## 3   Stonebridge+Park+Station+London Acton+Central+Station+London
+## 4             Euston+Station+London Acton+Central+Station+London
+## 5        Brondesbury+Station+London Acton+Central+Station+London
+##   ModeGoogle
+## 1      Train
+## 2      Train
+## 3       Tram
+## 4       Rail
+## 5 Train|Tram
 ```
 
 ```r
@@ -391,11 +514,7 @@ nrow(ogunique)
 ```
 
 ```
-## [1] 55614
+## [1] 54154
 ```
 
-### Location Data
-
-For mapping purposes, I would like to fuse external data sets of the locations of the origin and destinations. Here, we extract spatial data of stations coordinates as well as the local authorities in which the stations are located.
-
-On it...
+on it ...find another way result of call limits?
